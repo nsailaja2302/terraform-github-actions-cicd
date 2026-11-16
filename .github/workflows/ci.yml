@@ -50,10 +50,14 @@ jobs:
         run: terraform validate
 
       # Step 6: Collect validation artifact
+      - name: Prepare Terraform Lock File Artifact
+        run: cp terraform/.terraform.lock.hcl terraform-lock-file.hcl
+
+# Upload artifact
       - name: Upload Terraform Lock File
         uses: actions/upload-artifact@v4
         with:
-          name: terraform-lock-file
-          path: terraform/.terraform.lock.hcl
-          if-no-files-found: error
-          retention-days: 7
+        name: terraform-lock-file
+        path: terraform-lock-file.hcl
+        if-no-files-found: error
+        retention-days: 7
