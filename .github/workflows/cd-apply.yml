@@ -1,0 +1,72 @@
+
+name: Terraform CD Apply
+
+on:
+  workflow_dispatch:
+    inputs:
+      confirm_apply:
+        description: 'Type APPLY to confirm infrastructure deployment'
+        required: true
+        type: choice
+        options:
+          - NO
+          - APPLY
+        default: NO
+
+permissions:
+  contents: read
+  id-token: write
+
+jobs:
+  terraform-apply:
+    name: Terraform Apply
+    runs-on: ubuntu-latest
+
+    if: ${{ inputs.confirm_apply == 'APPLY' }}
+
+    defaults:
+      run:
+        working-directory: terraform
+
+    steps:
+      # Step 1: Checkout repository
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      # Step 2: Install Terraform
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: 1.6.6
+
+      # Step 3: Configure AWS credentials using OIDC
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ vars.AWS_ROLE_ARN }}
+          aws-region: ${{ vars.AWS_REGION }}
+          role-session-name: GitHubActionsTerraformApply
+
+      # Step 4: Prepare Terraform variables
+      - name: Prepare Terraform variables
+        run: cp terraform.tfvars.example terraform.tfvars
+
+      # Step 5: Initialize Terraform backend
+      - name: Terraform Init
+        run: terraform init
+
+      # Step 6: Validate configuration
+      - name: Terraform Validate
+        run: terraform validate
+
+      # Step 7: Generate a fresh saved plan
+      - name: Terraform Plan
+        run: terraform plan -out=tfplan
+
+      # Step 8: Apply the exact plan generated above
+      - name: Terraform Apply
+        run: terraform apply -auto-approve tfplan
+
+      # Step 9: Display Terraform outputs
+      - name: Terraform Outputs
+        run: terraform output
