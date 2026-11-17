@@ -24,3 +24,17 @@ jobs:
       - name: Verify AWS identity
         run: |
           aws sts get-caller-identity
+
+      - name: Verify Terraform backend access
+        run: |
+          echo "Checking S3 backend bucket..."
+          aws s3api head-bucket \
+            --bucket nsailaja-terraform-state-2026-12345
+
+          echo "Checking DynamoDB lock table..."
+          aws dynamodb describe-table \
+            --table-name terraform-state-lock \
+            --region ap-south-1
+
+          echo "Backend access verification completed."
+
