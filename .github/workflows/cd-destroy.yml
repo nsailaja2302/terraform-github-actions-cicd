@@ -1,0 +1,60 @@
+
+name: Terraform CD Destroy
+
+on:
+  workflow_dispatch:
+    inputs:
+      confirm_destroy:
+        description: 'Select DESTROY to delete portfolio infrastructure'
+        required: true
+        type: choice
+        options:
+          - NO
+          - DESTROY
+        default: NO
+
+permissions:
+  contents: read
+  id-token: write
+
+jobs:
+  terraform-destroy:
+    name: Terraform Destroy
+    runs-on: ubuntu-latest
+
+    if: ${{ inputs.confirm_destroy == 'DESTROY' }}
+
+    defaults:
+      run:
+        working-directory: terraform
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: 1.6.6
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ vars.AWS_ROLE_ARN }}
+          aws-region: ${{ vars.AWS_REGION }}
+          role-session-name: GitHubActionsTerraformDestroy
+
+      - name: Prepare Terraform variables
+        run: cp terraform.tfvars.example terraform.tfvars
+
+      - name: Terraform Init
+        run: terraform init
+
+      - name: Terraform Validate
+        run: terraform validate
+
+      - name: Terraform Destroy Plan
+        run: terraform plan -destroy -no-color
+
+      - name: Terraform Destroy
+        run: terraform destroy -auto-approve
